@@ -3,3 +3,4 @@ devel
 install
 bags
 .catkin_workspace
+.idea
