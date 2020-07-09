@@ -69,11 +69,10 @@ EkfNode::EkfNode()
     odom_H_(0, 3) = 1;
     odom_R_ = Eigen::MatrixXd::Identity(1, 1) * 0.1;
 
-    scan_H_ = Eigen::MatrixXd::Zero(3, 5);
+    scan_H_ = Eigen::MatrixXd::Zero(2, 5);
     scan_H_(0, 0) = 1;
     scan_H_(1, 1) = 1;
-    scan_H_(2, 2) = 1;
-    scan_R_ = Eigen::MatrixXd::Identity(3, 3) * 0.1;
+    scan_R_ = Eigen::MatrixXd::Identity(2, 2) * 0.1;
 
     // [x, y, theta, v, w]
     Eigen::VectorXd initial_state = Eigen::VectorXd::Zero(STATE_SIZE);
@@ -143,7 +142,7 @@ void EkfNode::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) {
         pcl::PCLPointCloud2 pcl_cloud;
         pcl_conversions::toPCL(cloud, pcl_cloud);
         pcl::fromPCLPointCloud2(pcl_cloud, *prev_cloud_);
-
+        prev_scan_ekf_ = ekf_;
         first_scan_msg = false;
         return;
     }
@@ -158,16 +157,16 @@ void EkfNode::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) {
 
     Eigen::Affine3d transform(ScanMatch({}, prev_cloud_, current_cloud));
 
-    Eigen::Vector3d z = Eigen::Vector3d::Zero();
-    z(0) = transform.translation()(0);
-    z(1) = transform.translation()(1);
-    z(2) = transform.linear().eulerAngles(0, 1, 2)(2);
+    Eigen::Vector2d z = Eigen::Vector2d::Zero();
+    z(0) = transform.translation()(0) + prev_scan_ekf_.state(0);
+    z(1) = transform.translation()(1) + prev_scan_ekf_.state(1);
 
     if (!Update(ekf_, z, scan_H_, scan_R_)) {
         ROS_ERROR("Not updating state! S is singular!");
     }
 
     prev_cloud_ = current_cloud;
+    prev_scan_ekf_ = ekf_;
 }
 
 void EkfNode::Run() {

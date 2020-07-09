@@ -64,6 +64,7 @@ private:
 
     laser_geometry::LaserProjection laser_projector_;
     pcl::PointCloud<pcl::PointXYZ>::Ptr prev_cloud_;
+    ekf::Ekf prev_scan_ekf_{};
 
     tf2_ros::Buffer tf_buffer_{};
     tf2_ros::TransformListener tf_listener_;
