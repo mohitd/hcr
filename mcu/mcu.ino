@@ -120,7 +120,7 @@ void loop()
     button_override();
 
     // **** SAFETY TIMEOUT **** //
-    if (millis() - last_command_stamp > 10)
+    if (millis() - last_command_stamp > 100)
     {
         drivetrain_command(0., 0.);
     }
@@ -148,12 +148,14 @@ void init_drivetrain()
 // drive a commanded linear and angular velocity
 void drivetrain_command(float v, float w)
 {
+    static unsigned long pid_time = millis();
     // fast reaction for immediately cutting off power
     if (abs(v) < V_EPS && abs(w) < W_EPS)
     {
         Serial.print("Stopping");
         analogWrite(MOTOR_L_PWM, 0);
         analogWrite(MOTOR_R_PWM, 0);
+        pid_time = millis();
         return;
     }
     
@@ -167,7 +169,6 @@ void drivetrain_command(float v, float w)
 
 
     // **** PID Control **** //
-    static unsigned long pid_time = millis();
     float pid_dt = (millis() - pid_time) / 1000.0f;
     pid_time = millis();
 
@@ -175,8 +176,8 @@ void drivetrain_command(float v, float w)
     float feedback_r = 2 * 3.1415 * pid_encoders[1] / COUNTS_PER_REV_R / pid_dt;
 
     // dead region to account for noisy encoders
-    if (abs(pid_encoders[0]) < 0.001 * COUNTS_PER_REV_L) feedback_l = 0.0f;
-    if (abs(pid_encoders[1]) < 0.001 * COUNTS_PER_REV_R) feedback_r = 0.0f;
+    //if (abs(pid_encoders[0]) < 0.001 * COUNTS_PER_REV_L) feedback_l = 0.0f;
+    //if (abs(pid_encoders[1]) < 0.001 * COUNTS_PER_REV_R) feedback_r = 0.0f;
     
     pid_encoders[0] = 0;
     pid_encoders[1] = 0;
@@ -200,20 +201,22 @@ void drivetrain_command(float v, float w)
     prev_error_r = error_r;
 
     // PID correction
-    w_l = kp * error_l + ki * ierror_l + kd * derror_l;
-    w_r = kp * error_r + ki * ierror_l + kd * derror_r;
+    //w_l = kp * error_l + ki * ierror_l + kd * derror_l;
+    //w_r = kp * error_r + ki * ierror_l + kd * derror_r;
 
     // direction of motors
     digitalWrite(MOTOR_L_DIR, w_l > 0 ? LOW : HIGH);
     digitalWrite(MOTOR_R_DIR, w_r > 0 ? LOW : HIGH);
 
     // map velocities to positive PWM
-    int pwm_l = abs(w_l) < FP_EPS ? 0 : (int) mapf(abs(w_l), 0, 15.38, PWM_MIN, PWM_MAX);
-    int pwm_r = abs(w_r) < FP_EPS ? 0 : (int) mapf(abs(w_r), 0, 15.38, PWM_MIN, PWM_MAX);
+    //int pwm_l = abs(w_l) < FP_EPS ? 0 : (int) mapf(abs(w_l), 0, 15.38, PWM_MIN, PWM_MAX);
+    //int pwm_r = abs(w_r) < FP_EPS ? 0 : (int) mapf(abs(w_r), 0, 15.38, PWM_MIN, PWM_MAX);
+    int pwm_l = (int) mapf(abs(w_l), 0, 15.38, PWM_MIN, PWM_MAX);
+    int pwm_r = (int) mapf(abs(w_r), 0, 15.38, PWM_MIN, PWM_MAX);
     
     // special case for 0
-    pwm_l = pwm_l == 0 ? 0 : constrain(pwm_l, PWM_MIN, PWM_MAX);
-    pwm_r = pwm_r == 0 ? 0 : constrain(pwm_r, PWM_MIN, PWM_MAX);
+    //pwm_l = pwm_l == 0 ? 0 : constrain(pwm_l, PWM_MIN, PWM_MAX);
+    //pwm_r = pwm_r == 0 ? 0 : constrain(pwm_r, PWM_MIN, PWM_MAX);
     
     Serial.print("Sending (");
     Serial.print(w_l); Serial.print("->"); Serial.print(pwm_l);
@@ -343,4 +346,3 @@ float mapf(float value, float a1, float a2, float b1, float b2)
 {
     return b1 + ((value - a1) * (b2 - b1))/(a2 - a1);
 }
-
