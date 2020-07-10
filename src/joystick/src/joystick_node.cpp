@@ -24,8 +24,13 @@
 
 #include "joystick/joystick.h"
 
-static constexpr float V_MAX = 2.0;
-static constexpr float W_MAX = M_2_PI;
+// [m/s]
+static constexpr float V_MAX = 1.0;
+// [rad/s]
+static constexpr float W_MAX = M_PI;
+
+// [Hz]
+static constexpr auto SAMPLE_RATE = 200;
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "joystick_node");
@@ -36,7 +41,7 @@ int main(int argc, char** argv) {
     geometry_msgs::TwistStamped velocity{};
 
     ros::Publisher velocity_pub = nh.advertise<geometry_msgs::TwistStamped>("/cmd_vel", 1);
-    ros::Rate sample_rate(200);
+    ros::Rate sample_rate(SAMPLE_RATE);
     while (ros::ok()) {
         if (joystick.Sample(joystick_values)) {
             float normalized_linear
@@ -47,7 +52,6 @@ int main(int argc, char** argv) {
             velocity.twist.angular.z = normalized_angular * W_MAX;
             velocity.header.stamp = ros::Time::now();
             velocity_pub.publish(velocity);
-            ROS_INFO_STREAM("JS: " << velocity);
         }
         ros::spinOnce();
         sample_rate.sleep();
