@@ -116,6 +116,7 @@ int main(int argc, char** argv) {
     unsigned char cmd_vel_buff[CMD_VEL_BUFFER_SIZE];
     cmd_vel_buff[0] = MCU_MAGIC_BYTE_WRITE;
     float cmd_vel[2] = {0., 0.};
+    bool prev_cmd_halt = true;
 
     ROS_INFO("Motion controller initialized!");
 
@@ -128,7 +129,18 @@ int main(int argc, char** argv) {
             cmd_vel[0] = cmd_vel_->twist.linear.x;
             cmd_vel[1] = cmd_vel_->twist.angular.z;
         }
-        ROS_INFO_STREAM("cmd_vel v: " << cmd_vel[0] << " w: " << cmd_vel[1]);
+
+        bool halt = (std::abs(cmd_vel[0]) < std::numeric_limits<float>::epsilon() &&
+                        std::abs(cmd_vel[1]) < std::numeric_limits<float>::epsilon());
+        if (!halt || !prev_cmd_halt) {
+            // only print if the command is nonzero
+            ROS_INFO_STREAM_THROTTLE(1. / 10, "cmd_vel v: " << cmd_vel[0] << " w: " << cmd_vel[1]);
+        }
+        // always print a final v=0, w = 0
+        if (halt && !prev_cmd_halt) {
+            ROS_INFO_STREAM("cmd_vel v: " << cmd_vel[0] << " w: " << cmd_vel[1]);
+        }
+        prev_cmd_halt = halt;
 
         // writing cmd_vel into a buffer, AFTER the command byte at cmd_vel_buff[0]
         memcpy(&cmd_vel_buff[1], cmd_vel, sizeof(cmd_vel));
