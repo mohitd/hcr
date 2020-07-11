@@ -35,7 +35,7 @@ static constexpr auto CMD_VEL_TOPIC = "/cmd_vel";
 static constexpr auto WHEEL_ENCODER_TOPIC = "/wheels/encoders";
 
 // size of serial buffer to read encoders
-static constexpr auto SERIAL_BUFFER_SIZE = 32;
+static constexpr auto SERIAL_BUFFER_SIZE = 64;
 // size of serial buffer to write (v, w) to MCU
 static constexpr auto CMD_VEL_BUFFER_SIZE = 9;
 
@@ -112,6 +112,8 @@ int main(int argc, char** argv) {
     // set up buffers
     unsigned char mcu_serial_buff[SERIAL_BUFFER_SIZE];
     int32_t encoders[2];
+    uint8_t bump[3];
+    uint16_t tof[3];
 
     unsigned char cmd_vel_buff[CMD_VEL_BUFFER_SIZE];
     cmd_vel_buff[0] = MCU_MAGIC_BYTE_WRITE;
@@ -161,9 +163,11 @@ int main(int argc, char** argv) {
 
             // we can't read enough data; skip this buffer for now
             // TODO: do something smarter here like reading the remaining bytes
-            if (i + sizeof(encoders) >= bytes_read) continue;
+            if (i + sizeof(encoders) + sizeof(bump) + sizeof(tof) >= bytes_read) continue;
 
             memcpy(encoders, &mcu_serial_buff[i], sizeof(encoders));
+            memcpy(bump, &mcu_serial_buff[i + sizeof(encoders)], sizeof(bump));
+            memcpy(tof, &mcu_serial_buff[i + sizeof(encoders) + sizeof(bump)], sizeof(tof));
 
             // publish the encoders message
             encoders_msg.header.stamp = ros::Time::now();

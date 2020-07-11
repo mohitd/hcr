@@ -17,7 +17,8 @@
 
 // **** GLOBAL VARS **** //
 
-unsigned char encoders_buffer[8];
+// encoders (L4 + R4), bump (L1 + C1 + R1), ToF (L2 + C2 + R2)
+unsigned char sensor_packet[17];
 volatile long encoders[2] = {0L, 0L};
 
 volatile long pid_encoders[2] = {0L, 0L};
@@ -36,6 +37,16 @@ static const byte ENCODER_L_A = 2;
 static const byte ENCODER_L_B = 12;
 static const byte ENCODER_R_A = 3;
 static const byte ENCODER_R_B = 11;
+
+// bump switch pins
+static const byte BUMP_R = 8;
+static const byte BUMP_C = 9;
+static const byte BUMP_L = 10;
+
+// TOF pins
+static const auto TOF_R = A5;
+static const auto TOF_C = A4;
+static const auto TOF_L = A6;
 
 // floating-point epsilon
 static const float FP_EPS = 0.01;
@@ -80,6 +91,10 @@ void init_encoders();
 void encoder_l_interrupt();
 void encoder_r_interrupt();
 
+void init_bump();
+
+void init_tof();
+
 void init_drivetrain();
 void drivetrain_command(float v, float w);
 
@@ -92,13 +107,16 @@ void setup()
 {
     init_drivetrain();
     init_encoders();
+    init_bump();
+    init_tof();
     
     Serial.begin(19200);
     Serial.println("Initialized MCU");
-} 
+}
  
-void loop() 
+void loop()
 {
+    memset(&sensor_packet, 0, sizeof(sensor_packet));
     static unsigned char cmd_vel_buffer[8];
     static float cmd_vel[2];
 
@@ -125,12 +143,29 @@ void loop()
         drivetrain_command(0., 0.);
     }
 
-    // **** SEND WHEEL ENCODERS **** //
+    // **** READ SENSORS **** //
+    unsigned char br = digitalRead(BUMP_R);
+    unsigned char bc = digitalRead(BUMP_C);
+    unsigned char bl = digitalRead(BUMP_L);
+    memcpy(&sensor_packet[8], br, sizeof(br));
+    memcpy(&sensor_packet[9], bc, sizeof(bc));
+    memcpy(&sensor_packet[10], bl, sizeof(bl));
+
+    unsigned short tof_r = analogRead(TOF_R);
+    unsigned short tof_c = analogRead(TOF_C);
+    unsigned short tof_l = analogRead(TOF_L);
+    memcpy(&sensor_packet[11], tof_r, sizeof(tof_r));
+    memcpy(&sensor_packet[13], tof_c, sizeof(tof_c));
+    memcpy(&sensor_packet[15], tof_l, sizeof(tof_l));
+
+    // **** READ WHEEL ENCODERS **** //
     Serial.print("L: "); Serial.println(encoders[0]);
     Serial.print("R: "); Serial.println(encoders[1]);
-    memcpy(encoders_buffer, &encoders, sizeof(encoders_buffer));
+    memcpy(sensor_packet, &encoders, sizeof(encoders));
+
+    // **** SEND SENSOR PACKET**** //
     Serial.write(254);
-    Serial.write(encoders_buffer, sizeof(encoders_buffer));
+    Serial.write(sensor_packet, sizeof(sensor_packet));
     encoders[0] = 0;
     encoders[1] = 0;
 
@@ -297,6 +332,20 @@ void encoder_r_interrupt()
         ++encoders[1];
         ++pid_encoders[1];
     }
+}
+
+void init_bump()
+{
+    pinMode(BUMP_R, INPUT);
+    pinMode(BUMP_C, INPUT);
+    pinMode(BUMP_L, INPUT);
+}
+
+void init_tof()
+{
+    pinMode(TOF_R, INPUT);
+    pinMode(TOF_C, INPUT);
+    pinMode(TOF_L, INPUT);
 }
 
 void button_override()
