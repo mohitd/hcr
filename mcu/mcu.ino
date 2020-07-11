@@ -144,24 +144,26 @@ void loop()
     }
 
     // **** READ SENSORS **** //
-    unsigned char br = digitalRead(BUMP_R);
-    unsigned char bc = digitalRead(BUMP_C);
     unsigned char bl = digitalRead(BUMP_L);
-    memcpy(&sensor_packet[8], br, sizeof(br));
+    unsigned char bc = digitalRead(BUMP_C);
+    unsigned char br = digitalRead(BUMP_R);
+    memcpy(&sensor_packet[8], bl, sizeof(bl));
     memcpy(&sensor_packet[9], bc, sizeof(bc));
-    memcpy(&sensor_packet[10], bl, sizeof(bl));
+    memcpy(&sensor_packet[10], br, sizeof(br));
 
-    unsigned short tof_r = analogRead(TOF_R);
-    unsigned short tof_c = analogRead(TOF_C);
     unsigned short tof_l = analogRead(TOF_L);
-    memcpy(&sensor_packet[11], tof_r, sizeof(tof_r));
+    unsigned short tof_c = analogRead(TOF_C);
+    unsigned short tof_r = analogRead(TOF_R);
+    memcpy(&sensor_packet[11], tof_l, sizeof(tof_l));
     memcpy(&sensor_packet[13], tof_c, sizeof(tof_c));
-    memcpy(&sensor_packet[15], tof_l, sizeof(tof_l));
+    memcpy(&sensor_packet[15], tof_r, sizeof(tof_r));
+
+    //Serial.print("ToF R: "); Serial.println(tof_r);
 
     // **** READ WHEEL ENCODERS **** //
     Serial.print("L: "); Serial.println(encoders[0]);
     Serial.print("R: "); Serial.println(encoders[1]);
-    memcpy(sensor_packet, &encoders, sizeof(encoders));
+    memcpy(&sensor_packet[0], &encoders, sizeof(encoders));
 
     // **** SEND SENSOR PACKET**** //
     Serial.write(254);
@@ -169,7 +171,7 @@ void loop()
     encoders[0] = 0;
     encoders[1] = 0;
 
-    delay(10);
+    delay(50);
 }
 
 void init_drivetrain()

@@ -21,6 +21,8 @@
 #include <ros/ros.h>
 #include <geometry_msgs/TwistStamped.h>
 #include <motion_controller_msgs/WheelEncoders.h>
+#include <motion_controller_msgs/SafetyBump.h>
+#include <motion_controller_msgs/SafetyToF.h>
 
 #include <cstdlib>
 #include <fcntl.h>
@@ -33,6 +35,8 @@ static constexpr auto MCU_COMMS_RATE = 200;
 // topic for command requests
 static constexpr auto CMD_VEL_TOPIC = "/cmd_vel";
 static constexpr auto WHEEL_ENCODER_TOPIC = "/wheels/encoders";
+static constexpr auto SAFETY_BUMP_TOPIC = "/safety/bump";
+static constexpr auto SAFETY_TOF_TOPIC = "/safety/tof";
 
 // size of serial buffer to read encoders
 static constexpr auto SERIAL_BUFFER_SIZE = 64;
@@ -104,8 +108,15 @@ int main(int argc, char** argv) {
     ros::NodeHandle nh;
 
     ros::Subscriber cmd_vel_sub = nh.subscribe(CMD_VEL_TOPIC, 1, &CmdVelSub);
-    ros::Publisher encoders_pub = nh.advertise<motion_controller_msgs::WheelEncoders>(WHEEL_ENCODER_TOPIC, 1);
+
     motion_controller_msgs::WheelEncoders encoders_msg;
+    ros::Publisher encoders_pub = nh.advertise<motion_controller_msgs::WheelEncoders>(WHEEL_ENCODER_TOPIC, 1);
+
+    motion_controller_msgs::SafetyBump bump_msg;
+    ros::Publisher bump_pub = nh.advertise<motion_controller_msgs::SafetyBump>(SAFETY_BUMP_TOPIC, 1);
+
+    motion_controller_msgs::SafetyToF tof_msg;
+    ros::Publisher tof_pub = nh.advertise<motion_controller_msgs::SafetyToF>(SAFETY_TOF_TOPIC, 1);
 
     int mcu_fd = ConfigureMcuConnection();
 
@@ -169,11 +180,25 @@ int main(int argc, char** argv) {
             memcpy(bump, &mcu_serial_buff[i + sizeof(encoders)], sizeof(bump));
             memcpy(tof, &mcu_serial_buff[i + sizeof(encoders) + sizeof(bump)], sizeof(tof));
 
-            // publish the encoders message
-            encoders_msg.header.stamp = ros::Time::now();
+            // publish all sensors
+            auto sensor_packet_time = ros::Time::now();
+
+            encoders_msg.header.stamp = sensor_packet_time;
             encoders_msg.left = encoders[0];
             encoders_msg.right = encoders[1];
             encoders_pub.publish(encoders_msg);
+
+            bump_msg.header.stamp = sensor_packet_time;
+            bump_msg.left = bump[0];
+            bump_msg.center = bump[1];
+            bump_msg.right = bump[2];
+            bump_pub.publish(bump_msg);
+
+            tof_msg.header.stamp = sensor_packet_time;
+            tof_msg.left = 1. / tof[0];
+            tof_msg.center = 1. / tof[1];
+            tof_msg.right = 1. / tof[2];
+            tof_pub.publish(tof_msg);
         }
 
         // reset buffers
@@ -181,8 +206,7 @@ int main(int argc, char** argv) {
         memset(&cmd_vel_buff[1], 0, sizeof(cmd_vel));
 
         // reset command velocity
-        //cmd_vel_.twist.linear.x = 0;
-        //cmd_vel_.twist.angular.z = 0;
+        cmd_vel_ = nullptr;
 
         ros::spinOnce();
         rate.sleep();
