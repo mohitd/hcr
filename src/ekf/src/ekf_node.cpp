@@ -137,8 +137,7 @@ void EkfNode::ReceiveOdometry(const motion_controller_msgs::WheelEncodersConstPt
 void EkfNode::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) {
     if (first_scan_msg) {
         sensor_msgs::PointCloud2 cloud;
-        //laser_projector_.transformLaserScanToPointCloud("base_link", *scan, cloud, tf_buffer_);
-        laser_projector_.projectLaser(*scan, cloud);
+        laser_projector_.transformLaserScanToPointCloud("base_link", *scan, cloud, tf_buffer_);
         pcl::PCLPointCloud2 pcl_cloud;
         pcl_conversions::toPCL(cloud, pcl_cloud);
         pcl::fromPCLPointCloud2(pcl_cloud, *prev_cloud_);
@@ -148,8 +147,7 @@ void EkfNode::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) {
     }
 
     sensor_msgs::PointCloud2 cloud;
-    //laser_projector_.transformLaserScanToPointCloud("base_link", *scan, cloud, tf_buffer_);
-    laser_projector_.projectLaser(*scan, cloud);
+    laser_projector_.transformLaserScanToPointCloud("base_link", *scan, cloud, tf_buffer_);
     pcl::PCLPointCloud2 pcl_cloud;
     pcl_conversions::toPCL(cloud, pcl_cloud);
     pcl::PointCloud<pcl::PointXYZ>::Ptr current_cloud(new pcl::PointCloud<pcl::PointXYZ>);

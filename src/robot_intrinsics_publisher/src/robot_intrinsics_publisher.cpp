@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
     geometry_msgs::TransformStamped base_link_to_camera;
     base_link_to_camera.header.stamp = ros::Time::now();
     base_link_to_camera.header.frame_id = "base_link";
-    base_link_to_camera.child_frame_id = "camera";
+    base_link_to_camera.child_frame_id = "camera_link";
     base_link_to_camera.transform.translation.x = 0.06;
     base_link_to_camera.transform.translation.y = 0.0;
     base_link_to_camera.transform.translation.z = 0.22;
