@@ -158,11 +158,7 @@ void loop()
     memcpy(&sensor_packet[13], tof_c, sizeof(tof_c));
     memcpy(&sensor_packet[15], tof_r, sizeof(tof_r));
 
-    //Serial.print("ToF R: "); Serial.println(tof_r);
-
     // **** READ WHEEL ENCODERS **** //
-    Serial.print("L: "); Serial.println(encoders[0]);
-    Serial.print("R: "); Serial.println(encoders[1]);
     memcpy(&sensor_packet[0], &encoders, sizeof(encoders));
 
     // **** SEND SENSOR PACKET**** //
@@ -189,7 +185,7 @@ void drivetrain_command(float v, float w)
     // fast reaction for immediately cutting off power
     if (abs(v) < V_EPS && abs(w) < W_EPS)
     {
-        Serial.print("Stopping");
+        Serial.print("Sending (0->0, 0->0)");
         analogWrite(MOTOR_L_PWM, 0);
         analogWrite(MOTOR_R_PWM, 0);
         pid_time = millis();
