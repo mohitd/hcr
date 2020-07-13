@@ -1,12 +1,8 @@
 <launch>
     <include file="$(find realsense2_camera)/launch/rs_camera.launch">
-        <arg name="enable_pointcloud" value="false"/>
+        <arg name="enable_pointcloud" value="true"/>
         <arg name="enable_sync" value="true"/>
         <arg name="align_depth" value="true"/>
         <arg name="unite_imu_method" value="linear_interpolation"/>
-        <arg name="fisheye_fps" value="20"/>
-        <arg name="depth_fps" value="20"/>
-        <arg name="infra_fps" value="20"/>
-        <arg name="color_fps" value="20"/>
     </include>
 </launch>
