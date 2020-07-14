@@ -1,0 +1,14 @@
+<launch>
+    <arg name="offline" default="false" />
+    <node pkg="obstacle_detection" type="obstacle_detection_node" name="obstacle_detection_node" output="screen" />
+
+    <group if="$(arg offline)">
+        <node pkg="ekf" type="ekf_node" name="ekf" output="screen" />
+        <node pkg="robot_intrinsics_publisher"
+            type="robot_intrinsics_publisher"
+            name="robot_intrinsics_publisher"
+            output="screen" />
+        <include file="$(find rplidar_ros)/launch/rplidar.launch" />
+        <include file="$(find mobility)/launch/camera.launch" />
+    </group>
+</launch>
