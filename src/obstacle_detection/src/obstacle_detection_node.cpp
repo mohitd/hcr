@@ -22,20 +22,33 @@
 #include "obstacle_detection/obstacle_detection_node.h"
 
 #include <ros/ros.h>
-#include <grid_map_msgs/GridMap.h>
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <pcl_ros/point_cloud.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <nav_msgs/OccupancyGrid.h>
+#include <cv_bridge/cv_bridge.h>
 
-constexpr auto kScanTopic = "/scan";
+#include <grid_map_msgs/GridMap.h>
+#include <nav_msgs/OccupancyGrid.h>
+#include <sensor_msgs/PointCloud2.h>
+
+#include "obstacle_detection/utils.h"
+
+static constexpr auto kScanTopic = "/scan";
+static constexpr auto kLocalMapTopic = "/local_map";
+static constexpr auto kDepthImageBaseTopic = "/camera/depth/image_rect_raw";
+
+static constexpr auto kBaseLink = "base_link";
 
 namespace obstacle_detection {
 
-ObstacleDetection::ObstacleDetection() : tf_listener_(tf_buffer_) {
-    ros::NodeHandle nh;
-    scan_sub_ = nh.subscribe(kScanTopic, 1, &ObstacleDetection::ReceiveScan, this);
-    local_map_pub_ = nh.advertise<nav_msgs::OccupancyGrid>("/local_map", 1);
+ObstacleDetection::ObstacleDetection() :
+        nh_{},
+        tf_listener_{tf_buffer_},
+        scan_sub_{nh_.subscribe(kScanTopic, 1, &ObstacleDetection::ReceiveScan, this)},
+        local_map_pub_{nh_.advertise<nav_msgs::OccupancyGrid>(kLocalMapTopic, 1)},
+        it_{nh_},
+        depth_sub_{it_.subscribeCamera(kDepthImageBaseTopic, 1, &ObstacleDetection::ReceiveDepth, this)},
+        point_cloud_pub_{nh_.advertise<sensor_msgs::PointCloud2>("/point_cloud", 1)}{
 }
 
 void ObstacleDetection::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) {
@@ -46,7 +59,7 @@ void ObstacleDetection::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) 
     local_map.setTimestamp(ros::Time::now().toNSec());
 
     sensor_msgs::PointCloud2 cloud;
-    laser_projector_.transformLaserScanToPointCloud("base_link", *scan, cloud, tf_buffer_);
+    laser_projector_.transformLaserScanToPointCloud(kBaseLink, *scan, cloud, tf_buffer_);
     pcl::PointCloud<pcl::PointXYZI>::Ptr current_cloud(new pcl::PointCloud<pcl::PointXYZI>);
     pcl::moveFromROSMsg(cloud, *current_cloud);
 
@@ -65,6 +78,33 @@ void ObstacleDetection::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) 
     nav_msgs::OccupancyGrid local_map_msg;
     grid_map::GridMapRosConverter::toOccupancyGrid(local_map, "occupancy", -1, 1, local_map_msg);
     local_map_pub_.publish(local_map_msg);
+}
+
+void ObstacleDetection::ReceiveDepth(
+        const sensor_msgs::ImageConstPtr& aligned_depth_msg,
+        const sensor_msgs::CameraInfoConstPtr& camera_info_msg) {
+    cv_bridge::CvImageConstPtr depth_cv_image = cv_bridge::toCvShare(aligned_depth_msg);
+    const cv::Mat& depth_img = depth_cv_image->image;
+
+    Eigen::Affine3f sensor_to_robot_affine;
+    if (!LookupTransform(aligned_depth_msg->header.frame_id,
+            kBaseLink,
+            aligned_depth_msg->header.stamp,
+            tf_buffer_,
+            sensor_to_robot_affine)) {
+        return;
+    }
+
+    if (depth_camera_intrinsics_.cols == 1) {
+        depth_camera_intrinsics_ = cv::Mat(3, 3, CV_64FC1, (void*)camera_info_msg->K.data());
+    }
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud = ProjectDepthImage(depth_img, depth_camera_intrinsics_, sensor_to_robot_affine);
+    sensor_msgs::PointCloud2 ros_point_cloud;
+    pcl::toROSMsg(*point_cloud, ros_point_cloud);
+    ros_point_cloud.header.frame_id = kBaseLink;
+    ros_point_cloud.header.stamp = aligned_depth_msg->header.stamp;
+    point_cloud_pub_.publish(ros_point_cloud);
 }
 
 }

@@ -21,46 +21,24 @@
 
 #pragma once
 
-#include <opencv2/opencv.hpp>
-
 #include <ros/ros.h>
-#include <sensor_msgs/LaserScan.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/CameraInfo.h>
-#include <grid_map_core/GridMap.hpp>
-#include <laser_geometry/laser_geometry.h>
+#include <opencv2/opencv.hpp>
+#include <pcl_ros/point_cloud.h>
 #include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-#include <image_transport/image_transport.h>
-#include <image_transport/subscriber_filter.h>
-#include <image_transport/camera_subscriber.h>
+#include <Eigen/Eigen>
 
 namespace obstacle_detection {
 
-class ObstacleDetection {
-public:
-    ObstacleDetection();
-private:
-    void ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan);
-    void ReceiveDepth(
-            const sensor_msgs::ImageConstPtr& aligned_depth_msg,
-            const sensor_msgs::CameraInfoConstPtr& camera_info_msg);
+pcl::PointCloud<pcl::PointXYZ>::Ptr ProjectDepthImage(
+        const cv::Mat& depth_image,
+        const cv::Mat& intrinsics,
+        const Eigen::Affine3f& sensor_to_robot_transform);
 
-    ros::NodeHandle nh_;
-    laser_geometry::LaserProjection laser_projector_;
-
-    tf2_ros::Buffer tf_buffer_;
-    tf2_ros::TransformListener tf_listener_;
-
-    ros::Publisher local_map_pub_;
-    ros::Subscriber scan_sub_;
-
-    // image subscribers
-    image_transport::ImageTransport it_;
-    image_transport::CameraSubscriber depth_sub_;
-
-    cv::Mat depth_camera_intrinsics_{1, 1, CV_64FC1};
-    ros::Publisher point_cloud_pub_;
-};
+bool LookupTransform(
+        const std::string &from,
+        const std::string &to,
+        const ros::Time &timestamp,
+        const tf2_ros::Buffer &tf_buffer,
+        Eigen::Affine3f& transform);
 
 }

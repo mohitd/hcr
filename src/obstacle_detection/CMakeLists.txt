@@ -18,10 +18,15 @@ find_package(catkin REQUIRED COMPONENTS
     laser_geometry
     tf2
     tf2_ros
+    image_transport
+    cv_bridge
+    pcl_ros
+    eigen_conversions
 )
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
+find_package(OpenCV REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -127,7 +132,9 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_node
-    src/obstacle_detection_node.cpp)
+    src/obstacle_detection_node.cpp
+    src/utils.cpp
+)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -144,6 +151,7 @@ target_link_libraries(${PROJECT_NAME}_node
     ${catkin_LIBRARIES}
     Eigen3::Eigen
     ${PCL_LIBRARIES}
+    ${OpenCV_LIBS}
 )
 
 #############
