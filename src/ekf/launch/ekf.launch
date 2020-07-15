@@ -2,7 +2,7 @@
     <arg name="offline" default="false" />
     <node pkg="ekf" type="ekf_node" name="ekf" output="screen" />
 
-    <group if="$(arg offline)">
+    <group unless="$(arg offline)">
         <node pkg="robot_intrinsics_publisher"
             type="robot_intrinsics_publisher"
             name="robot_intrinsics_publisher"
