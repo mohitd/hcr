@@ -100,6 +100,29 @@ void ObstacleDetection::ReceiveDepth(
     }
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud = ProjectDepthImage(depth_img, depth_camera_intrinsics_, sensor_to_robot_affine);
+
+    grid_map::GridMap local_map{};
+    local_map.setGeometry({15, 15}, 0.05);
+    local_map.add("occupancy");
+    local_map.setFrameId("odom");
+    local_map.setTimestamp(ros::Time::now().toNSec());
+
+    for (const auto& point : point_cloud->points) {
+        for (grid_map::LineIterator it(local_map, grid_map::Position(0, 0), {point.x, point.y}); !it.isPastEnd(); ++it) {
+            auto it_cpy = it;
+            ++it_cpy;
+            if (it_cpy.isPastEnd()) {
+                local_map.at("occupancy", *it) = 1.0f;
+            } else {
+                local_map.at("occupancy", *it) = -1.0f;
+            }
+        }
+    }
+
+    nav_msgs::OccupancyGrid local_map_msg;
+    grid_map::GridMapRosConverter::toOccupancyGrid(local_map, "occupancy", -1, 1, local_map_msg);
+    local_map_pub_.publish(local_map_msg);
+
     sensor_msgs::PointCloud2 ros_point_cloud;
     pcl::toROSMsg(*point_cloud, ros_point_cloud);
     ros_point_cloud.header.frame_id = kBaseLink;
