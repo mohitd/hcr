@@ -52,6 +52,7 @@ private:
     tf2_ros::Buffer tf_buffer_;
     tf2_ros::TransformListener tf_listener_;
 
+    ros::Publisher octomap_pub_;
     ros::Publisher local_map_pub_;
     ros::Subscriber scan_sub_;
 

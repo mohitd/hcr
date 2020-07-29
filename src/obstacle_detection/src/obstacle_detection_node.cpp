@@ -30,11 +30,17 @@
 #include <grid_map_msgs/GridMap.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud2_iterator.h>
+
+#include <octomap/OcTree.h>
+#include <octomap_ros/conversions.h>
+#include <octomap_msgs/conversions.h>
 
 #include "obstacle_detection/utils.h"
 
 static constexpr auto kScanTopic = "/scan";
 static constexpr auto kLocalMapTopic = "/local_map";
+static constexpr auto kOctomapTopic = "/octomap";
 static constexpr auto kDepthImageBaseTopic = "/camera/depth/image_rect_raw";
 
 static constexpr auto kBaseLink = "base_link";
@@ -45,6 +51,7 @@ ObstacleDetection::ObstacleDetection() :
         nh_{},
         tf_listener_{tf_buffer_},
         scan_sub_{nh_.subscribe(kScanTopic, 1, &ObstacleDetection::ReceiveScan, this)},
+        octomap_pub_{nh_.advertise<octomap_msgs::Octomap>(kOctomapTopic, 1)},
         local_map_pub_{nh_.advertise<nav_msgs::OccupancyGrid>(kLocalMapTopic, 1)},
         it_{nh_},
         depth_sub_{it_.subscribeCamera(kDepthImageBaseTopic, 1, &ObstacleDetection::ReceiveDepth, this)},
@@ -52,32 +59,22 @@ ObstacleDetection::ObstacleDetection() :
 }
 
 void ObstacleDetection::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) {
-    grid_map::GridMap local_map{};
-    local_map.setGeometry({15, 15}, 0.05);
-    local_map.add("occupancy");
-    local_map.setFrameId("odom");
-    local_map.setTimestamp(ros::Time::now().toNSec());
-
     sensor_msgs::PointCloud2 cloud;
     laser_projector_.transformLaserScanToPointCloud(kBaseLink, *scan, cloud, tf_buffer_);
-    pcl::PointCloud<pcl::PointXYZI>::Ptr current_cloud(new pcl::PointCloud<pcl::PointXYZI>);
-    pcl::moveFromROSMsg(cloud, *current_cloud);
 
-    for (const auto& point : current_cloud->points) {
-        for (grid_map::LineIterator it(local_map, grid_map::Position(0, 0), {point.x, point.y}); !it.isPastEnd(); ++it) {
-            auto it_cpy = it;
-            ++it_cpy;
-            if (it_cpy.isPastEnd()) {
-                local_map.at("occupancy", *it) = 1.0f;
-            } else {
-                local_map.at("occupancy", *it) = -1.0f;
-            }
-        }
-    }
+    octomap::Pointcloud octomap_cloud;
+    octomap::pointCloud2ToOctomap(cloud, octomap_cloud);
 
-    nav_msgs::OccupancyGrid local_map_msg;
-    grid_map::GridMapRosConverter::toOccupancyGrid(local_map, "occupancy", -1, 1, local_map_msg);
-    local_map_pub_.publish(local_map_msg);
+    octomap::OcTree tree(0.05);
+    tree.insertPointCloud(octomap_cloud, {0, 0, 0});
+    tree.updateInnerOccupancy();
+
+    octomap_msgs::Octomap octomap_msg;
+    octomap_msg.header.frame_id = "base_link";
+    octomap_msg.header.stamp = scan->header.stamp;
+    octomap_msgs::binaryMapToMsg(tree, octomap_msg);
+    octomap_pub_.publish(octomap_msg);
+
 }
 
 void ObstacleDetection::ReceiveDepth(

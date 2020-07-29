@@ -22,5 +22,8 @@
   <depend>cv_bridge</depend>
   <depend>pcl_ros</depend>
   <depend>eigen_conversions</depend>
+  <depend>octomap_ros</depend>
+  <depend>octomap_msgs</depend>
+  <depend>octomap</depend>
 
 </package>
