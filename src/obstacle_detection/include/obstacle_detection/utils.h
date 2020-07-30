@@ -21,15 +21,23 @@
 
 #pragma once
 
+#include <memory>
+
 #include <ros/ros.h>
 #include <opencv2/opencv.hpp>
 #include <pcl_ros/point_cloud.h>
+#include <octomap/octomap.h>
 #include <tf2_ros/buffer.h>
 #include <Eigen/Eigen>
 
 namespace obstacle_detection {
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr ProjectDepthImage(
+        const cv::Mat& depth_image,
+        const cv::Mat& intrinsics,
+        const Eigen::Affine3f& sensor_to_robot_transform);
+
+std::unique_ptr<octomap::Pointcloud> DepthImageToPointCloud(
         const cv::Mat& depth_image,
         const cv::Mat& intrinsics,
         const Eigen::Affine3f& sensor_to_robot_transform);

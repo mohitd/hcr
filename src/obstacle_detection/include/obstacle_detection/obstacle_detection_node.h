@@ -43,7 +43,7 @@ public:
 private:
     void ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan);
     void ReceiveDepth(
-            const sensor_msgs::ImageConstPtr& aligned_depth_msg,
+            const sensor_msgs::ImageConstPtr& depth_img_msg,
             const sensor_msgs::CameraInfoConstPtr& camera_info_msg);
 
     ros::NodeHandle nh_;

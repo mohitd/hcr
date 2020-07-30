@@ -71,6 +71,39 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr ProjectDepthImage(
     return point_cloud;
 }
 
+std::unique_ptr<octomap::Pointcloud> DepthImageToPointCloud(
+        const cv::Mat& depth_image,
+        const cv::Mat& intrinsics,
+        const Eigen::Affine3f& sensor_to_robot_transform) {
+    const int rows = depth_image.rows;
+    const int cols = depth_image.cols;
+
+    std::unique_ptr<octomap::Pointcloud> point_cloud(std::make_unique<octomap::Pointcloud>());
+
+    for (int r = 0; r < rows; ++r) {
+        for (int c = 0; c < cols; ++c) {
+            const uint16_t depth_val = depth_image.at<uint16_t>(r, c);
+
+            // invalid points are set to 0
+            if (depth_val == 0) {
+                continue;
+            }
+
+            // this is apparently the way to convert a depth uint16_t to a floating-point value
+            const float z = depth_val * 0.001f;
+            const float x = (c - intrinsics.at<double>(0, 2)) * z / intrinsics.at<double>(0, 0);
+            const float y = (r - intrinsics.at<double>(1, 2)) * z / intrinsics.at<double>(1, 1);
+
+            Eigen::Vector3f point{x, y, z};
+            point = sensor_to_robot_transform * point;
+
+            point_cloud->push_back(point[0], point[1], point[2]);
+        }
+    }
+
+    return point_cloud;
+}
+
 bool LookupTransform(
         const std::string &from,
         const std::string &to,

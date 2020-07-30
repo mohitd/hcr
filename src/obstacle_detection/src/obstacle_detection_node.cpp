@@ -21,6 +21,8 @@
 
 #include "obstacle_detection/obstacle_detection_node.h"
 
+#include <chrono>
+
 #include <ros/ros.h>
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <pcl_ros/point_cloud.h>
@@ -78,15 +80,15 @@ void ObstacleDetection::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) 
 }
 
 void ObstacleDetection::ReceiveDepth(
-        const sensor_msgs::ImageConstPtr& aligned_depth_msg,
+        const sensor_msgs::ImageConstPtr& depth_img_msg,
         const sensor_msgs::CameraInfoConstPtr& camera_info_msg) {
-    cv_bridge::CvImageConstPtr depth_cv_image = cv_bridge::toCvShare(aligned_depth_msg);
+    cv_bridge::CvImageConstPtr depth_cv_image = cv_bridge::toCvShare(depth_img_msg);
     const cv::Mat& depth_img = depth_cv_image->image;
 
     Eigen::Affine3f sensor_to_robot_affine;
-    if (!LookupTransform(aligned_depth_msg->header.frame_id,
+    if (!LookupTransform(depth_img_msg->header.frame_id,
             kBaseLink,
-            aligned_depth_msg->header.stamp,
+            depth_img_msg->header.stamp,
             tf_buffer_,
             sensor_to_robot_affine)) {
         return;
@@ -96,35 +98,16 @@ void ObstacleDetection::ReceiveDepth(
         depth_camera_intrinsics_ = cv::Mat(3, 3, CV_64FC1, (void*)camera_info_msg->K.data());
     }
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr point_cloud = ProjectDepthImage(depth_img, depth_camera_intrinsics_, sensor_to_robot_affine);
+    std::unique_ptr<octomap::Pointcloud> octomap_cloud = DepthImageToPointCloud(depth_img, depth_camera_intrinsics_, sensor_to_robot_affine);
 
-    grid_map::GridMap local_map{};
-    local_map.setGeometry({15, 15}, 0.05);
-    local_map.add("occupancy");
-    local_map.setFrameId("odom");
-    local_map.setTimestamp(ros::Time::now().toNSec());
+    octomap::OcTree tree(0.05);
+    tree.insertPointCloud(*octomap_cloud, {0, 0, 0}, -1, false, true);
 
-    for (const auto& point : point_cloud->points) {
-        for (grid_map::LineIterator it(local_map, grid_map::Position(0, 0), {point.x, point.y}); !it.isPastEnd(); ++it) {
-            auto it_cpy = it;
-            ++it_cpy;
-            if (it_cpy.isPastEnd()) {
-                local_map.at("occupancy", *it) = 1.0f;
-            } else {
-                local_map.at("occupancy", *it) = -1.0f;
-            }
-        }
-    }
-
-    nav_msgs::OccupancyGrid local_map_msg;
-    grid_map::GridMapRosConverter::toOccupancyGrid(local_map, "occupancy", -1, 1, local_map_msg);
-    local_map_pub_.publish(local_map_msg);
-
-    sensor_msgs::PointCloud2 ros_point_cloud;
-    pcl::toROSMsg(*point_cloud, ros_point_cloud);
-    ros_point_cloud.header.frame_id = kBaseLink;
-    ros_point_cloud.header.stamp = aligned_depth_msg->header.stamp;
-    point_cloud_pub_.publish(ros_point_cloud);
+    octomap_msgs::Octomap octomap_msg;
+    octomap_msg.header.frame_id = "base_link";
+    octomap_msg.header.stamp = depth_img_msg->header.stamp;
+    octomap_msgs::binaryMapToMsg(tree, octomap_msg);
+    octomap_pub_.publish(octomap_msg);
 }
 
 }
