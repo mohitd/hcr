@@ -23,6 +23,8 @@
 
 #include <opencv2/opencv.hpp>
 
+#include <octomap/OcTree.h>
+
 #include <ros/ros.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/Image.h>
@@ -53,7 +55,6 @@ private:
     tf2_ros::TransformListener tf_listener_;
 
     ros::Publisher octomap_pub_;
-    ros::Publisher local_map_pub_;
     ros::Subscriber scan_sub_;
 
     // image subscribers
@@ -61,7 +62,8 @@ private:
     image_transport::CameraSubscriber depth_sub_;
 
     cv::Mat depth_camera_intrinsics_{1, 1, CV_64FC1};
-    ros::Publisher point_cloud_pub_;
+
+    octomap::OcTree local_map_{0.05};
 };
 
 }

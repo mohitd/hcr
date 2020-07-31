@@ -54,10 +54,8 @@ ObstacleDetection::ObstacleDetection() :
         tf_listener_{tf_buffer_},
         scan_sub_{nh_.subscribe(kScanTopic, 1, &ObstacleDetection::ReceiveScan, this)},
         octomap_pub_{nh_.advertise<octomap_msgs::Octomap>(kOctomapTopic, 1)},
-        local_map_pub_{nh_.advertise<nav_msgs::OccupancyGrid>(kLocalMapTopic, 1)},
         it_{nh_},
-        depth_sub_{it_.subscribeCamera(kDepthImageBaseTopic, 1, &ObstacleDetection::ReceiveDepth, this)},
-        point_cloud_pub_{nh_.advertise<sensor_msgs::PointCloud2>("/point_cloud", 1)}{
+        depth_sub_{it_.subscribeCamera(kDepthImageBaseTopic, 1, &ObstacleDetection::ReceiveDepth, this)} {
 }
 
 void ObstacleDetection::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) {
@@ -67,16 +65,13 @@ void ObstacleDetection::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) 
     octomap::Pointcloud octomap_cloud;
     octomap::pointCloud2ToOctomap(cloud, octomap_cloud);
 
-    octomap::OcTree tree(0.05);
-    tree.insertPointCloud(octomap_cloud, {0, 0, 0});
-    tree.updateInnerOccupancy();
+    local_map_.insertPointCloud(octomap_cloud, {0, 0, 0});
 
     octomap_msgs::Octomap octomap_msg;
     octomap_msg.header.frame_id = "base_link";
     octomap_msg.header.stamp = scan->header.stamp;
-    octomap_msgs::binaryMapToMsg(tree, octomap_msg);
+    octomap_msgs::binaryMapToMsg(local_map_, octomap_msg);
     octomap_pub_.publish(octomap_msg);
-
 }
 
 void ObstacleDetection::ReceiveDepth(
@@ -100,13 +95,12 @@ void ObstacleDetection::ReceiveDepth(
 
     std::unique_ptr<octomap::Pointcloud> octomap_cloud = DepthImageToPointCloud(depth_img, depth_camera_intrinsics_, sensor_to_robot_affine);
 
-    octomap::OcTree tree(0.05);
-    tree.insertPointCloud(*octomap_cloud, {0, 0, 0}, -1, false, true);
+    local_map_.insertPointCloud(*octomap_cloud, {0, 0, 0}, -1, false, true);
 
     octomap_msgs::Octomap octomap_msg;
     octomap_msg.header.frame_id = "base_link";
     octomap_msg.header.stamp = depth_img_msg->header.stamp;
-    octomap_msgs::binaryMapToMsg(tree, octomap_msg);
+    octomap_msgs::binaryMapToMsg(local_map_, octomap_msg);
     octomap_pub_.publish(octomap_msg);
 }
 
