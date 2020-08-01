@@ -1,0 +1,5 @@
+<launch>
+    <include file="$(find mobility)/launch/camera.launch" />
+    <include file="$(find mobility)/launch/joystick.launch" />
+    <include file="$(find rplidar_ros)/launch/rplidar.launch" />
+</launch>
