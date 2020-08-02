@@ -36,10 +36,16 @@ Eigen::Matrix4d ScanMatch(
         icp = pcl::IterativeClosestPointNonLinear<pcl::PointXYZ, pcl::PointXYZ>();
     }
 
-    icp.setRANSACIterations(100);
+    icp.setRANSACIterations(500);
     icp.setMaximumIterations(params.max_iterations);
-    icp.setInputTarget(prev_cloud);
-    icp.setInputSource(current_cloud);
+    icp.setTransformationEpsilon(1e-9);
+    icp.setMaxCorrespondenceDistance(0.10);
+    icp.setEuclideanFitnessEpsilon(0.50);
+    icp.setRANSACOutlierRejectionThreshold(0.05);
+
+    // find the forward transform from the previous frame to the current one
+    icp.setInputTarget(current_cloud);
+    icp.setInputSource(prev_cloud);
 
     pcl::PointCloud<pcl::PointXYZ> output;
 

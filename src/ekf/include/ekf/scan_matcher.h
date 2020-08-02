@@ -27,7 +27,7 @@
 namespace ekf {
 
 struct ScanMatcherParams {
-    int max_iterations = 100;
+    int max_iterations = 50;
     bool nonlinear_icp = false;
 };
 
