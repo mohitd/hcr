@@ -1,12 +1,12 @@
 <launch>
     <arg name="offline" default="false" />
     <node pkg="ekf" type="ekf_node" name="ekf" output="screen" />
+    <node pkg="robot_intrinsics_publisher"
+        type="robot_intrinsics_publisher"
+        name="robot_intrinsics_publisher"
+        output="screen" />
 
     <group unless="$(arg offline)">
-        <node pkg="robot_intrinsics_publisher"
-            type="robot_intrinsics_publisher"
-            name="robot_intrinsics_publisher"
-            output="screen" />
         <include file="$(find rplidar_ros)/launch/rplidar.launch" />
         <include file="$(find mobility)/launch/camera.launch" />
     </group>
