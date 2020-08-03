@@ -25,6 +25,7 @@
 
 #include <ros/ros.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/utils.h>
 #include <sensor_msgs/Imu.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <laser_geometry/laser_geometry.h>
@@ -41,14 +42,16 @@
 
 #include <robot_config/robot_config.h>
 
-constexpr auto kOdometryTopic = "/wheels/encoders";
-constexpr auto kImuTopic = "/camera/imu";
-constexpr auto kScanTopic = "/scan";
+static constexpr auto kOdometryTopic = "/wheels/encoders";
+static constexpr auto kImuTopic = "/camera/imu";
+static constexpr auto kScanTopic = "/scan";
 
-
-constexpr auto UPDATE_RATE = 40;
-
-constexpr auto STATE_SIZE = 5;
+static constexpr auto UPDATE_RATE = 40;
+static constexpr auto STATE_SIZE = 5;
+// motors can't go this fast and no one is going to move it this fast
+// still WIP on why the MCU occasionally produces really high counts
+static constexpr auto V_MAX_SANITY = 2.0;
+static constexpr auto W_MAX_SANITY = M_2_PI;
 
 namespace ekf {
 
@@ -106,6 +109,13 @@ void EkfNode::ReceiveImu(const sensor_msgs::ImuConstPtr& imu) {
 
     double dt = (imu->header.stamp - last_imu_stamp_).toSec();
     auto w = transformed_angular_velocity.z;
+
+    // sanity checking on velocity
+    if (w > W_MAX_SANITY) {
+        ROS_WARN_STREAM("Impossible angular velocity!: " << w << "rad/s");
+        return;
+    }
+
     Eigen::VectorXd z(1);
     z(0) = w;
 
@@ -125,6 +135,14 @@ void EkfNode::ReceiveOdometry(const motion_controller_msgs::WheelEncodersConstPt
     double dt = (odometry->header.stamp - last_odom_stamp_).toSec();
     double counts = 0.5 * (odometry->left + odometry->right);
     double v = counts * robot_config::DISTANCE_PER_COUNT / dt;
+
+    // sanity checking on velociy
+    if (v > V_MAX_SANITY) {
+        ROS_WARN_STREAM("Impossible velocity!: " << v << "m/s (l="
+            << odometry->left << ", r=" << odometry->right << ")");
+        return;
+    }
+
     Eigen::VectorXd z(1);
     z(0) = v;
 
@@ -180,7 +198,9 @@ void EkfNode::Run() {
         orientation.setRPY(0, 0, ekf_.state(2));
         pose.pose.pose.orientation = tf2::toMsg(orientation);
         pose.pose.covariance = toRos(ekf_.covariance);
-        ROS_INFO_STREAM("" << pose.pose.pose);
+        ROS_INFO_STREAM("x=" << pose.pose.pose.position.x
+            << ", y=" << pose.pose.pose.position.y
+            << ", theta=" << tf2::getYaw(pose.pose.pose.orientation));
         pose_pub_.publish(pose);
 
         geometry_msgs::TransformStamped transform;
