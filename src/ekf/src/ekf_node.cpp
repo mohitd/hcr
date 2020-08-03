@@ -163,9 +163,7 @@ void EkfNode::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) {
     if (first_scan_msg) {
         sensor_msgs::PointCloud2 cloud;
         laser_projector_.transformLaserScanToPointCloud("base_link", *scan, cloud, tf_buffer_);
-        pcl::PCLPointCloud2 pcl_cloud;
-        pcl_conversions::toPCL(cloud, pcl_cloud);
-        pcl::fromPCLPointCloud2(pcl_cloud, *prev_cloud_);
+        pcl::moveFromROSMsg(cloud, *prev_cloud_);
         prev_scan_ekf_ = ekf_;
         first_scan_msg = false;
         return;
@@ -173,10 +171,8 @@ void EkfNode::ReceiveScan(const sensor_msgs::LaserScanConstPtr& scan) {
 
     sensor_msgs::PointCloud2 cloud;
     laser_projector_.transformLaserScanToPointCloud("base_link", *scan, cloud, tf_buffer_);
-    pcl::PCLPointCloud2 pcl_cloud;
-    pcl_conversions::toPCL(cloud, pcl_cloud);
     pcl::PointCloud<pcl::PointXYZ>::Ptr current_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::fromPCLPointCloud2(pcl_cloud, *current_cloud);
+    pcl::moveFromROSMsg(cloud, *current_cloud);
 
     Eigen::Affine3d transform(ScanMatch({}, prev_cloud_, current_cloud));
 
