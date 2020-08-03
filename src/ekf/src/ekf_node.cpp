@@ -119,7 +119,10 @@ void EkfNode::ReceiveImu(const sensor_msgs::ImuConstPtr& imu) {
     Eigen::VectorXd z(1);
     z(0) = w;
 
-    Update(ekf_, z, imu_H_, imu_R_);
+    if (!Update(ekf_, z, imu_H_, imu_R_)) {
+        ROS_ERROR("Not updating state! S is singular!");
+        return;
+    }
     Predict(ekf_, dt);
 
     last_imu_stamp_ = imu->header.stamp;
@@ -146,7 +149,11 @@ void EkfNode::ReceiveOdometry(const motion_controller_msgs::WheelEncodersConstPt
     Eigen::VectorXd z(1);
     z(0) = v;
 
-    Update(ekf_, z, odom_H_, odom_R_);
+    if (!Update(ekf_, z, odom_H_, odom_R_)) {
+        ROS_ERROR("Not updating state! S is singular!");
+        return;
+    }
+
     Predict(ekf_, dt);
 
     last_odom_stamp_ = odometry->header.stamp;
