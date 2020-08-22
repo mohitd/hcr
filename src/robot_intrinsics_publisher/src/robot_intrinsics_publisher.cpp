@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
     base_link_to_laser.child_frame_id = "laser";
     base_link_to_laser.transform.translation.x = -0.175;
     base_link_to_laser.transform.translation.y = 0.0;
-    base_link_to_laser.transform.translation.z = 0.27;
+    base_link_to_laser.transform.translation.z = 0.34;
     base_link_to_laser.transform.rotation.w = 1;
 
     transform_broadcaster.sendTransform({base_link_to_camera, base_link_to_laser});
