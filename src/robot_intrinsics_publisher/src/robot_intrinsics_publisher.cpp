@@ -21,6 +21,8 @@
 
 #include <ros/ros.h>
 #include <tf2_ros/static_transform_broadcaster.h>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 int main(int argc, char** argv) {
     ros::init(argc, argv, "robot_intrinsics_publisher");
@@ -35,6 +37,9 @@ int main(int argc, char** argv) {
     base_link_to_camera.transform.translation.z = 0.22;
     base_link_to_camera.transform.rotation.w = 1;
 
+    // +x of lidar is behind the device
+    tf2::Quaternion laser_yaw{};
+    laser_yaw.setRPY(0, 0, M_PI);
     geometry_msgs::TransformStamped base_link_to_laser;
     base_link_to_laser.header.stamp = ros::Time::now();
     base_link_to_laser.header.frame_id = "base_link";
@@ -42,7 +47,7 @@ int main(int argc, char** argv) {
     base_link_to_laser.transform.translation.x = -0.175;
     base_link_to_laser.transform.translation.y = 0.0;
     base_link_to_laser.transform.translation.z = 0.34;
-    base_link_to_laser.transform.rotation.w = 1;
+    base_link_to_laser.transform.rotation = tf2::toMsg(laser_yaw);
 
     transform_broadcaster.sendTransform({base_link_to_camera, base_link_to_laser});
     ros::spin();
