@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(motion_controller)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++17)
+add_compile_options(-std=c++17 -Wall -Wextra -Wpedantic)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -26,6 +25,9 @@ catkin_package()
 ## Your package locations should be listed before other locations
 include_directories(
     include
+)
+include_directories(
+    SYSTEM
     ${catkin_INCLUDE_DIRS}
 )
 

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(ekf)
 
-add_compile_options(-std=c++17)
+add_compile_options(-std=c++17 -Wall -Wextra -Wpedantic)
 
 find_package(catkin REQUIRED COMPONENTS
     geometry_msgs
@@ -28,6 +28,9 @@ catkin_package()
 ## Your package locations should be listed before other locations
 include_directories(
     include
+)
+include_directories(
+    SYSTEM
     ${catkin_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
 )

@@ -166,8 +166,8 @@ int main(int argc, char** argv) {
         /*
          * Reading wheel encoders
          */
-        int bytes_read = read(mcu_fd, mcu_serial_buff, SERIAL_BUFFER_SIZE);
-        int i = 0;
+        std::size_t bytes_read = read(mcu_fd, mcu_serial_buff, SERIAL_BUFFER_SIZE);
+        std::size_t i = 0;
         while (i < bytes_read) {
             // iterate forward through the buffer until the first signal byte
             while (mcu_serial_buff[i++] != MCU_MAGIC_BYTE_READ && i < bytes_read);

@@ -52,8 +52,8 @@ namespace obstacle_detection {
 ObstacleDetection::ObstacleDetection() :
         nh_{},
         tf_listener_{tf_buffer_},
-        scan_sub_{nh_.subscribe(kScanTopic, 1, &ObstacleDetection::ReceiveScan, this)},
         octomap_pub_{nh_.advertise<octomap_msgs::Octomap>(kOctomapTopic, 1)},
+        scan_sub_{nh_.subscribe(kScanTopic, 1, &ObstacleDetection::ReceiveScan, this)},
         it_{nh_},
         depth_sub_{it_.subscribeCamera(kDepthImageBaseTopic, 1, &ObstacleDetection::ReceiveDepth, this)} {
 }

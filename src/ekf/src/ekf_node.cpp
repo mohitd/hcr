@@ -56,8 +56,8 @@ static constexpr auto W_MAX_SANITY = M_2_PI;
 namespace ekf {
 
 EkfNode::EkfNode()
-        : tf_listener_(tf_buffer_),
-        prev_cloud_(new pcl::PointCloud<pcl::PointXYZ>) {
+        : prev_cloud_(new pcl::PointCloud<pcl::PointXYZ>),
+        tf_listener_(tf_buffer_) {
     ros::NodeHandle nh;
 
     odometry_sub_ = nh.subscribe(kOdometryTopic, 1, &EkfNode::ReceiveOdometry, this);
