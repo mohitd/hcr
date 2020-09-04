@@ -1,11 +1,14 @@
 <launch>
-    <include file="$(find rplidar_ros)/launch/rplidar.launch" />
+    <arg name="online" default="false" />
 
-    <!-- Publish transforms -->
-    <node pkg="robot_intrinsics_publisher"
-        type="robot_intrinsics_publisher"
-        name="robot_intrinsics_publisher"
-        output="screen" />
+    <group if="$(arg online)">
+        <include file="$(find rplidar_ros)/launch/rplidar.launch" />
+        <!-- Publish transforms -->
+        <node pkg="robot_intrinsics_publisher"
+            type="robot_intrinsics_publisher"
+            name="robot_intrinsics_publisher"
+            output="screen" />
+    </group>
 
     <!-- Cartographer -->
     <node name="cartographer_node" pkg="cartographer_ros"
