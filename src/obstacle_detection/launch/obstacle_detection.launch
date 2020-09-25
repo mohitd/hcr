@@ -1,12 +1,13 @@
 <launch>
-    <arg name="offline" default="false" />
+    <arg name="online" default="false" />
     <node pkg="obstacle_detection" type="obstacle_detection_node" name="obstacle_detection_node" output="screen" />
-    <node pkg="robot_intrinsics_publisher"
-        type="robot_intrinsics_publisher"
-        name="robot_intrinsics_publisher"
-        output="screen" />
 
-    <group unless="$(arg offline)">
+    <group unless="$(arg online)">
+        <rosparam param="use_sim_time">true</rosparam>
+        <node type="rviz" name="rviz" pkg="rviz" args="-d $(find obstacle_detection)/rviz/obstacle_detection.rviz"/>
+    </group>
+
+    <group if="$(arg online)">
         <node pkg="ekf" type="ekf_node" name="ekf" output="screen" />
         <include file="$(find rplidar_ros)/launch/rplidar.launch" />
         <include file="$(find mobility)/launch/camera.launch" />

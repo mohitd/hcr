@@ -10,6 +10,10 @@
             output="screen" />
     </group>
 
+    <group unless="$(arg online)">
+        <rosparam param="use_sim_time">true</rosparam>
+    </group>
+
     <!-- Cartographer -->
     <node name="cartographer_node" pkg="cartographer_ros"
         type="cartographer_node" args="

@@ -21,14 +21,11 @@ find_package(catkin REQUIRED COMPONENTS
     cv_bridge
     pcl_ros
     eigen_conversions
-    octomap_ros
-    octomap_msgs
 )
 
 find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(octomap REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -131,7 +128,6 @@ include_directories(
     SYSTEM
     ${catkin_INCLUDE_DIRS}
     ${PCL_INCLUDE_DIRS}
-    ${OCTOMAP_INCLUDE_DIRS}
 )
 
 ## Declare a C++ executable
@@ -158,7 +154,6 @@ target_link_libraries(${PROJECT_NAME}_node
     Eigen3::Eigen
     ${PCL_LIBRARIES}
     ${OpenCV_LIBS}
-    ${OCTOMAP_LIBRARIES}
 )
 
 #############
